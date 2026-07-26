@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>爱心捐赠 · 公益行动</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 720px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.02);
+            padding: 40px 30px;
+            transition: all 0.2s ease;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: #0b1e33;
+            margin-bottom: 6px;
+        }
+        .header p {
+            color: #4a5b6f;
+            font-size: 15px;
+            font-weight: 400;
+            letter-spacing: 0.2px;
+        }
+        .amount-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 30px 0 24px;
+        }
+        .amount-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 60px;
+            padding: 14px 0;
+            font-size: 18px;
+            font-weight: 500;
+            color: #1e293b;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            line-height: 1;
+        }
+        .amount-btn:hover {
+            background: #e6edf5;
+            border-color: #b9c8db;
+            transform: scale(1.01);
+        }
+        .amount-btn.selected {
+            background: #1e3a5f;
+            border-color: #1e3a5f;
+            color: white;
+            box-shadow: 0 4px 8px rgba(30, 58, 95, 0.12);
+        }
+        .custom-area {
+            margin: 20px 0 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px 16px;
+            background: #f9fcff;
+            padding: 16px 20px;
+            border-radius: 40px;
+            border: 1px solid #e9edf2;
+        }
+        .custom-area label {
+            font-size: 15px;
+            font-weight: 450;
+            color: #1f3a57;
+            letter-spacing: 0.2px;
+        }
+        .custom-input-wrapper {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 140px;
+            background: white;
+            border-radius: 60px;
+            border: 1px solid #dce2ea;
+            padding: 0 12px;
+            transition: 0.15s;
+        }
+        .custom-input-wrapper:focus-within {
+            border-color: #1e3a5f;
+            box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.08);
+        }
+        .custom-input-wrapper span {
+            color: #4a5b6f;
+            font-weight: 450;
+            margin-right: 4px;
+            font-size: 16px;
+        }
+        .custom-input-wrapper input {
+            border: none;
+            outline: none;
+            padding: 14px 6px 14px 0;
+            font-size: 16px;
+            width: 100%;
+            background: transparent;
+            color: #0b1e33;
+            font-weight: 450;
+        }
+        .custom-input-wrapper input::placeholder {
+            color: #aab7c9;
+            font-weight: 350;
+            font-size: 15px;
+        }
+        .donate-btn {
+            width: 100%;
+            background: #1e3a5f;
+            border: none;
+            border-radius: 60px;
+            padding: 18px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            transition: 0.2s ease;
+            box-shadow: 0 6px 14px rgba(30, 58, 95, 0.15);
+            margin-top: 6px;
+        }
+        .donate-btn:hover {
+            background: #143049;
+            transform: scale(1.01);
+            box-shadow: 0 8px 18px rgba(30, 58, 95, 0.2);
+        }
+        .donate-btn:active {
+            transform: scale(0.98);
+        }
+        .footnote {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 13px;
+            color: #97a7bb;
+            letter-spacing: 0.2px;
+            border-top: 1px solid #edf2f7;
+            padding-top: 22px;
+        }
+        .footnote small {
+            background: #f4f8fe;
+            padding: 4px 14px;
+            border-radius: 30px;
+            color: #7b8ca3;
+            font-weight: 400;
+        }
+        .fake-toast {
+            display: none;
+            margin-top: 18px;
+            background: #eaf3f0;
+            border-radius: 40px;
+            padding: 12px 18px;
+            color: #1d4a3e;
+            font-size: 14px;
+            text-align: center;
+            border-left: 4px solid #2d7a5e;
+        }
+        .admin-switch {
+            margin-top: 18px;
+            text-align: right;
+            font-size: 12px;
+            color: #bcc9db;
+        }
+        .admin-switch a {
+            color: #a0b3cb;
+            text-decoration: none;
+            border-bottom: 1px dashed #d4dfec;
+            padding-bottom: 2px;
+        }
+        .admin-switch a:hover {
+            color: #1e3a5f;
+            border-bottom: 1px solid #1e3a5f;
+        }
+        @media (max-width: 480px) {
+            .card { padding: 28px 18px; }
+            .amount-grid { gap: 10px; }
+            .amount-btn { font-size: 16px; padding: 12px 0; }
+            .custom-area { padding: 14px 16px; flex-direction: column; align-items: stretch; }
+            .custom-input-wrapper { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="app">
+        <div class="header">
+            <h1>❤️ 爱心捐赠 · 守护未来</h1>
+            <p>每一份善意都将用于困境儿童关怀</p>
+        </div>
+
+        <!-- 金额网格 11个预设 -->
+        <div class="amount-grid" id="amountGrid">
+            <div class="amount-btn" data-value="1">1</div>
+            <div class="amount-btn" data-value="10">10</div>
+            <div class="amount-btn" data-value="20">20</div>
+            <div class="amount-btn" data-value="30">30</div>
+            <div class="amount-btn" data-value="40">40</div>
+            <div class="amount-btn" data-value="50">50</div>
+            <div class="amount-btn" data-value="60">60</div>
+            <div class="amount-btn" data-value="70">70</div>
+            <div class="amount-btn" data-value="80">80</div>
+            <div class="amount-btn" data-value="90">90</div>
+            <div class="amount-btn" data-value="100">100</div>
+        </div>
+
+        <!-- 自定义金额 - 支持表达式 -->
+        <div class="custom-area">
+            <label for="customAmount">自定义金额</label>
+            <div class="custom-input-wrapper">
+                <span>¥</span>
+                <input type="text" id="customAmount" placeholder="输入金额" value="">
+            </div>
+        </div>
+
+        <!-- 捐赠按钮 -->
+        <button class="donate-btn" id="donateBtn">确认捐赠 · 传递温暖</button>
+
+        <!-- 整蛊提示 (灰色小字) -->
+        <div class="footnote">
+            <small>⚠️ 此页面为整蛊娱乐演示，不产生真实交易</small>
+        </div>
+
+        <!-- 反馈 -->
+        <div id="fakeToast" class="fake-toast">❤️ 感谢您的善意！</div>
+    </div>
+
+    <script>
+        (function() {
+            const amountBtns = document.querySelectorAll('.amount-btn');
+            const customInput = document.getElementById('customAmount');
+            const donateBtn = document.getElementById('donateBtn');
+            const toast = document.getElementById('fakeToast');
+            let selectedValue = null;
+            let currentInput = ''; // 存储用户输入的原始内容
+
+            // 安全计算表达式（仅支持 + - * /）
+            function safeEval(expr) {
+                try {
+                    // 移除所有空格
+                    const cleaned = expr.replace(/\s/g, '');
+                    // 只允许数字、运算符、小数点
+                    if (!/^[\d+\-*/.()]+$/.test(cleaned)) {
+                        return null;
+                    }
+                    // 使用 Function 替代 eval 更安全
+                    const result = new Function(`return (${cleaned})`)();
+                    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                        return result;
+                    }
+                    return null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            // 处理输入：尝试计算表达式
+            function processInput(raw) {
+                if (!raw || raw.trim() === '') {
+                    return { display: '', value: null };
+                }
+                const trimmed = raw.trim();
+                // 尝试计算
+                const result = safeEval(trimmed);
+                if (result !== null) {
+                    // 如果是纯数字字符串，直接显示数字
+                    return { display: String(result), value: result };
+                } else {
+                    // 无法计算，作为普通文本
+                    return { display: trimmed, value: trimmed };
+                }
+            }
+
+            // 预设金额点击
+            amountBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    amountBtns.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    const val = parseInt(this.getAttribute('data-value'), 10);
+                    selectedValue = val;
+                    customInput.value = '';
+                    currentInput = '';
+                    toast.style.display = 'none';
+                });
+            });
+
+            // 自定义输入 - 实时处理
+            customInput.addEventListener('input', function() {
+                amountBtns.forEach(b => b.classList.remove('selected'));
+                const raw = this.value;
+                currentInput = raw;
+                if (raw.trim() === '') {
+                    selectedValue = null;
+                } else {
+                    const processed = processInput(raw);
+                    selectedValue = processed.value;
+                }
+            });
+
+            // 捐赠按钮
+            donateBtn.addEventListener('click', function() {
+                let finalAmount = null;
+                let displayValue = '';
+                const customRaw = customInput.value.trim();
+                
+                // 优先取自定义输入
+                if (customRaw !== '') {
+                    const processed = processInput(customRaw);
+                    if (processed.value !== null) {
+                        finalAmount = processed.value;
+                        displayValue = processed.display;
+                    } else {
+                        // 无法计算，但保留原始内容
+                        finalAmount = customRaw;
+                        displayValue = customRaw;
+                    }
+                } else if (selectedValue !== null) {
+                    // 使用预设选中
+                    finalAmount = selectedValue;
+                    displayValue = String(selectedValue);
+                } else {
+                    toast.style.display = 'block';
+                    toast.textContent = '请选择或输入捐赠金额';
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                    }, 2000);
+                    return;
+                }
+
+                // 保存记录 - 存储计算后的结果
+                const donationRecord = {
+                    amount: finalAmount,
+                    display: displayValue, // 保存显示值（用于管理员展示）
+                    raw: customRaw || String(selectedValue), // 保存原始输入
+                    timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
+                    id: Date.now() + Math.random().toString(36).substring(2, 6)
+                };
+                let records = [];
+                try {
+                    const stored = localStorage.getItem('donation_records');
+                    if (stored) {
+                        records = JSON.parse(stored);
+                        if (!Array.isArray(records)) records = [];
+                    }
+                } catch (e) { records = []; }
+                records.push(donationRecord);
+                localStorage.setItem('donation_records', JSON.stringify(records));
+
+                // 显示反馈
+                toast.style.display = 'block';
+                toast.textContent = `✅ 捐赠 ${displayValue} 成功！感谢您的爱心 ❤️`;
+                amountBtns.forEach(b => b.classList.remove('selected'));
+                customInput.value = '';
+                currentInput = '';
+                selectedValue = null;
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
+            });
+
+            // 点击预设时隐藏toast
+            amountBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    toast.style.display = 'none';
+                });
+            });
+
+            // 默认选中10元
+            const defaultBtn = document.querySelector('.amount-btn[data-value="10"]');
+            if (defaultBtn) {
+                defaultBtn.classList.add('selected');
+                selectedValue = 10;
+            }
+        })();
+    </script>
+</body>
+</html>
