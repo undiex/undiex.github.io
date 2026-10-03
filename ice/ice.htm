@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>冰冰冰🧊</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #0b1a2f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            touch-action: none;
+            overflow: hidden;
+        }
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 30% 20%, #1e3a5f, #0a111f);
+            overflow: hidden;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
+            cursor: pointer;
+            transition: transform 0.08s ease;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        .info {
+            position: absolute;
+            top: 16px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #b4e6ff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-shadow: 0 2px 8px #003366;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            backdrop-filter: blur(2px);
+            padding: 8px 16px;
+            border-radius: 60px;
+            width: fit-content;
+            margin: 0 auto;
+            background: rgba(0, 20, 40, 0.4);
+            border: 1px solid #4f8bc9;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .info span {
+            color: #fff;
+            font-weight: 800;
+            background: #2a5a8c;
+            padding: 2px 12px;
+            border-radius: 40px;
+            margin-left: 6px;
+            box-shadow: 0 0 12px #8ecaff;
+        }
+        .hint {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #7fa9d0;
+            font-size: 0.9rem;
+            pointer-events: none;
+            opacity: 0.9;
+            text-shadow: 0 1px 6px #000;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="gameContainer">
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        <div>🧊 冰块: <span id="countDisplay">0</span></div>
+    </div>
+    <div class="hint">点击屏幕生成冰块 · 小心手机不要爆炸</div>
+</div>
+
+<script>
+    (function(){
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('gameContainer');
+        const countDisplay = document.getElementById('countDisplay');
+
+        // ==================== 配置参数 ====================
+        const EXPLOSION_FORCE = 7.0;    // 爆炸力度
+        const GRAVITY = 0.22;           // 重力
+        const AIR_FRICTION = 0.994;     // 空气阻力
+        const BOUNCE = 0.62;            // 弹性系数
+        const GROUND_FRICTION = 0.86;   // 地面摩擦
+        const ICE_RADIUS = 16;          // 碰撞半径（用于物理）
+        const EMOJI_SIZE = 32;          // emoji绘制大小
+        const MIN_DIST = ICE_RADIUS * 1.8; // 冰块间最小距离（用于分离）
+
+        // ==================== 画布尺寸 ====================
+        let width, height;
+
+        // ==================== 冰块数组 ====================
+        let ices = [];
+
+        // ==================== 动画帧 ====================
+        let animationFrame = null;
+
+        // ==================== 调整画布 ====================
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width;
+            canvas.height = height;
+
+            // 边界修正，防止冰块出界
+            ices.forEach(ice => {
+                ice.x = Math.min(Math.max(ice.x, ICE_RADIUS), width - ICE_RADIUS);
+                ice.y = Math.min(Math.max(ice.y, ICE_RADIUS), height - ICE_RADIUS);
+            });
+        }
+
+        // ==================== 更新UI计数器 ====================
+        function updateCount() {
+            countDisplay.textContent = ices.length;
+        }
+
+        // ==================== 创建新冰块 ====================
+        function createIce(x, y, vx = 0, vy = 0) {
+            return {
+                x: x,
+                y: y,
+                vx: vx,
+                vy: vy,
+                radius: ICE_RADIUS,
+            };
+        }
+
+        // ==================== 添加冰块（无数量限制）====================
+        function addIceAt(x, y) {
+            // 随机初速度，增加自然感
+            const vx = (Math.random() - 0.5) * 2.2;
+            const vy = (Math.random() - 0.5) * 2.2 - 1.2;
+            const ice = createIce(x, y, vx, vy);
+            ices.push(ice);
+            updateCount();
+        }
+
+        // ==================== 爆炸效果 ====================
+        function triggerExplosion() {
+            if (ices.length === 0) return;
+
+            // 计算所有冰块中心
+            let sumX = 0, sumY = 0;
+            ices.forEach(ice => { sumX += ice.x; sumY += ice.y; });
+            const centerX = sumX / ices.length;
+            const centerY = sumY / ices.length;
+
+            // 给每个冰块施加向外的爆炸力
+            ices.forEach(ice => {
+                const dx = ice.x - centerX;
+                const dy = ice.y - centerY;
+                const dist = Math.hypot(dx, dy) || 1;
+                const force = EXPLOSION_FORCE * (0.8 + Math.random() * 0.6);
+                ice.vx += (dx / dist) * force + (Math.random() - 0.5) * 3;
+                ice.vy += (dy / dist) * force + (Math.random() - 0.5) * 3 - 1.2;
+            });
+
+            // 清空冰块数组（瞬间消失，视觉上就是爆开）
+            ices = [];
+            updateCount();
+
+            // 画面震动反馈
+            container.style.transform = 'scale(0.97)';
+            setTimeout(() => { container.style.transform = 'scale(1)'; }, 100);
+        }
+
+        // ==================== 物理更新 ====================
+        function updatePhysics() {
+            // ---------- 单个冰块物理 ----------
+            for (let i = 0; i < ices.length; i++) {
+                const ice = ices[i];
+
+                // 重力
+                ice.vy += GRAVITY;
+
+                // 空气阻力
+                ice.vx *= AIR_FRICTION;
+                ice.vy *= AIR_FRICTION;
+
+                // 更新位置
+                ice.x += ice.vx;
+                ice.y += ice.vy;
+
+                // 边界碰撞（左/右）
+                if (ice.x - ICE_RADIUS < 0) {
+                    ice.x = ICE_RADIUS;
+                    ice.vx = -ice.vx * BOUNCE;
+                    ice.vx *= 0.98;
+                } else if (ice.x + ICE_RADIUS > width) {
+                    ice.x = width - ICE_RADIUS;
+                    ice.vx = -ice.vx * BOUNCE;
+                    ice.vx *= 0.98;
+                }
+
+                // 边界碰撞（上/下）
+                if (ice.y - ICE_RADIUS < 0) {
+                    ice.y = ICE_RADIUS;
+                    ice.vy = -ice.vy * BOUNCE;
+                    ice.vy *= 0.98;
+                } else if (ice.y + ICE_RADIUS > height) {
+                    ice.y = height - ICE_RADIUS;
+                    ice.vy = -ice.vy * BOUNCE;
+                    ice.vx *= GROUND_FRICTION;
+
+                    // 停止微小弹跳
+                    if (Math.abs(ice.vy) < 0.5) ice.vy = 0;
+                    if (Math.abs(ice.vx) < 0.1) ice.vx = 0;
+                }
+
+                // 微小随机扰动，防止完全静止
+                if (Math.random() < 0.008 && Math.abs(ice.vx) < 0.2 && Math.abs(ice.vy) < 0.2) {
+                    ice.vx += (Math.random() - 0.5) * 0.25;
+                    ice.vy += (Math.random() - 0.5) * 0.25;
+                }
+
+                // 速度归零阈值
+                if (Math.abs(ice.vx) < 0.02) ice.vx = 0;
+                if (Math.abs(ice.vy) < 0.02 && ice.y + ICE_RADIUS >= height - 1) ice.vy = 0;
+            }
+
+            // ---------- 冰块间简单分离 ----------
+            // 注意：冰块数量过多时，O(n²) 会变慢，但这里不做限制，由用户自行控制
+            for (let i = 0; i < ices.length; i++) {
+                for (let j = i + 1; j < ices.length; j++) {
+                    const a = ices[i];
+                    const b = ices[j];
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist < MIN_DIST && dist > 0.001) {
+                        const push = (MIN_DIST - dist) / 2;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        a.x -= nx * push;
+                        a.y -= ny * push;
+                        b.x += nx * push;
+                        b.y += ny * push;
+
+                        // 轻微速度交换，让碰撞更自然
+                        const dvx = a.vx - b.vx;
+                        const dvy = a.vy - b.vy;
+                        const dot = dvx * nx + dvy * ny;
+                        if (dot > 0) {
+                            const impulse = dot * 0.5;
+                            a.vx -= impulse * nx;
+                            a.vy -= impulse * ny;
+                            b.vx += impulse * nx;
+                            b.vy += impulse * ny;
+                        }
+                    }
+                }
+            }
+
+            // 二次边界修正（分离可能导致出界）
+            for (let ice of ices) {
+                ice.x = Math.min(Math.max(ice.x, ICE_RADIUS), width - ICE_RADIUS);
+                ice.y = Math.min(Math.max(ice.y, ICE_RADIUS), height - ICE_RADIUS);
+            }
+        }
+
+        // ==================== 绘制 ====================
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 设置 emoji 字体
+            ctx.font = `${EMOJI_SIZE}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Helvetica Neue", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 绘制每个冰块
+            ices.forEach(ice => {
+                // 跳过完全出界的冰块
+                if (ice.x < -EMOJI_SIZE || ice.x > width + EMOJI_SIZE || 
+                    ice.y < -EMOJI_SIZE || ice.y > height + EMOJI_SIZE) {
+                    return;
+                }
+
+                // 1. 绘制不透明底圆（浅冰蓝色），让冰块有实心感
+                ctx.beginPath();
+                ctx.arc(ice.x, ice.y, ICE_RADIUS * 0.92, 0, Math.PI * 2);
+                ctx.fillStyle = '#b8e2ff';
+                ctx.fill();
+
+                // 2. 绘制 emoji（带轻微阴影，增加立体感）
+                ctx.shadowColor = 'rgba(0, 100, 200, 0.35)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                ctx.fillText('🧊', ice.x, ice.y);
+
+                // 重置阴影
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            });
+        }
+
+        // ==================== 动画循环 ====================
+        function tick() {
+            updatePhysics();
+            draw();
+            animationFrame = requestAnimationFrame(tick);
+        }
+
+        // ==================== 启动动画 ====================
+        function startAnimation() {
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+            animationFrame = requestAnimationFrame(tick);
+        }
+
+        // ==================== 事件处理 ====================
+        function handlePointerDown(e) {
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+
+            const spawnX = Math.min(Math.max(canvasX, ICE_RADIUS), width - ICE_RADIUS);
+            const spawnY = Math.min(Math.max(canvasY, ICE_RADIUS), height - ICE_RADIUS);
+
+            // 每次点击都生成冰块（无数量限制）
+            addIceAt(spawnX, spawnY);
+        }
+
+        function bindEvents() {
+            canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handlePointerDown(e);
+            }, { passive: false });
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        // ==================== 初始化 ====================
+        function init() {
+            resizeCanvas();
+            ices = [];
+            updateCount();
+            bindEvents();
+            startAnimation();
+        }
+
+        init();
+
+        // ==================== 清理 ====================
+        window.addEventListener('beforeunload', () => {
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+        });
+
+    })();
+</script>
+</body>
+  </html>
